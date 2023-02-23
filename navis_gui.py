@@ -2,10 +2,10 @@ import time
 
 import pyautogui
 
-bnr_egl = '503300003258'
-amount = '3'
+bnr_egl = '503300003037'
+amount = '2'
 equ = '45G1'
-weight = '25000'
+weight = '27000'
 
 tol = 'NLEMX'
 shipper = 'XCL'
@@ -16,33 +16,40 @@ pyautogui.write(bnr_egl)
 pyautogui.press('enter')
 pyautogui.move(xOffset=0, yOffset=200)
 
+time.sleep(2)
 bnr_exists = None
 
 while bnr_exists == None:
-    bnr_exists = pyautogui.locateOnScreen(r'png\bnr_exists.png', minSearchTime=10)
+    bnr_exists = pyautogui.locateOnScreen(r'png\bnr_exists2.png', minSearchTime=10)
 
 if bnr_exists:
-    pyautogui.click(r'png\bnr_exists.png', duration=0.2)
+    pyautogui.click(r'png\bnr_exists2.png', duration=0.2)
     pyautogui.click(r'png\bnr_edit.png', duration=0.5)
 
+#time.sleep(2)
 bnr_edit_panel = None
+bnr_edit_panel_dark = None
 
-while bnr_edit_panel == None:
-    bnr_edit_panel = pyautogui.locateOnScreen(r'png\bnr_edit_panel.png', minSearchTime=10)
+while bnr_edit_panel == None and bnr_edit_panel_dark == None:
+    bnr_edit_panel = pyautogui.locateOnScreen(r'png\bnr_edit_panel.png')
+    bnr_edit_panel_dark = pyautogui.locateOnScreen(r'png\bnr_edit_panel_dark.png')
 
-if bnr_edit_panel:
+if bnr_edit_panel or bnr_edit_panel_dark:
     pyautogui.click(r'png\equ_tally_out.png')
     pyautogui.rightClick()
     time.sleep(0.5)
     pyautogui.move(xOffset=10, yOffset=10)
     pyautogui.leftClick()
 
+#time.sleep(2)
 equ_edit_panel = None
+equ_edit_panel_dark = None
 
-while equ_edit_panel == None:
-    equ_edit_panel = pyautogui.locateOnScreen(r'png\equ_edit_panel.png', minSearchTime=10)
+while equ_edit_panel == None and equ_edit_panel_dark == None:
+    equ_edit_panel = pyautogui.locateOnScreen(r'png\equ_edit_panel.png')
+    equ_edit_panel = pyautogui.locateOnScreen(r'png\equ_edit_panel_dark.png')
 
-if equ_edit_panel:
+if equ_edit_panel or equ_edit_panel_dark:
     pyautogui.write(amount)
     pyautogui.press('tab')
     time.sleep(0.1)
