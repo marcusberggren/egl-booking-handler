@@ -10,6 +10,12 @@ weight = '27000'
 tol = 'NLEMX'
 shipper = 'XCL'
 
+"""
+Kan vara bättre att använda 'locateCenterOnScreen() istället för 'click' och png-fil?
+Och inkludera region=x, x, x, x
+samt grayscale=True
+"""
+
 
 pyautogui.click(r'png\bnr_search_bar_empty.png')
 pyautogui.write(bnr_egl)
