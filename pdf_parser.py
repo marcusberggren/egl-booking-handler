@@ -1,3 +1,5 @@
+import re
+
 import fitz
 
 BOOKING_REVISED = "/ REVISE :"
@@ -36,21 +38,22 @@ dangerous_cargo = "(NON-HAZARDOUS)"
 
 rect_booking_revised = (66, 0, 24, 0)
 rect_date_booked = (36, 0, 120, 0)
-rect_booking_number = (130, 2, 200, -7)
+rect_booking_number = (130, 2, 150, -7)
 rect_departure_week = (130, 3, 250, -7)
 rect_departure_date = (108, 3, 160, -7)
-rect_discharge_port = (132, 3, 160, -7)
+rect_discharge_port = (132, 3, 120, -7)
 rect_mother_vessel = (48, 3, 250, -7)
 rect_stowage_code = (84, 3, 100, -7)
 rect_final_pod = (132, 3, 300, -7)
 rect_commodity = (132, 3, 350, -7)
 rect_discharge_terminal = (132, 3, 200, -7)
-rect_container_info = (0, 26, 42, 26)
-rect_container_weight = (0, 26, 6, 26)
-rect_container_tare = (12, 26, 0, 26)
-rect_dangerous_cargo = (18, 26, 36, 26)
+rect_container_info = (0, 29, 100, 19)
+rect_container_weight = (-5, 29, 6, 19)
+rect_container_tare = (12, 29, 10, 19)
+rect_dangerous_cargo = (18, 29, 36, 19)
 
-file_path= r'bokningar_pdf\special\SB2LBDHY.PDF'
+#file_path= r'bokningar_pdf\special\SB2LBDHY.PDF'
+file_path= r'bokningar_pdf\special\SBBP1HTM.pdf'
 total_height = 0.0
 total_words = []
 
@@ -74,7 +77,7 @@ def get_value_in_rect(search_str, rect_add):
 
     if rect:
         try:
-            return [word[4] for word in total_words if fitz.Rect(word[:4]).intersects(rect)]
+            return ' '.join([word[4] for word in total_words if fitz.Rect(word[:4]).intersects(rect)])
         except:
             print(f"List comprehension for {search_str} not working.")
             return ""
@@ -95,23 +98,49 @@ container_weight = get_value_in_rect(CONTAINER_WEIGHT, rect_container_weight)
 container_tare = get_value_in_rect(CONTAINER_TARE, rect_container_tare)
 dangerous_cargo = get_value_in_rect(DANGEROUS_CARGO, rect_dangerous_cargo)
 
+def extract_container_weight(string):
+    # matches format like 150,000.00
+    pattern = r'^\d{1,3}(,\d{3})*\.\d{2}'
+    match = re.search(pattern, string)
+    if match:
+        return match.group().replace(',', '.')
+    else:
+        return ""
+
+def extract_tare_weight(string):
+    # matches format at end of string like 25,200
+    pattern = r'\d{1,3}(,\d{3})*$'
+    match = re.search(pattern, string)
+    if match:
+        return match.group().replace(',', '.')
+    else:
+        return None
+
+def extract_final_pod(string):
+    # matches all characters before the first comma after a colon
+    pattern = r'^:(.+?),'
+    match = re.search(pattern, string)
+    if match:
+        return match.group(1)
+    else:
+        return None
+
 return_dict = {
     'booking_revised': booking_revised,
-    'date_booked': date_booked[0],
-    'time_booked': date_booked[1],
+    'date_booked': date_booked,      #regex sub: 'DATE:'
     'booking_number': booking_number,
     'departure_week': departure_week,
-    'departure_date': departure_date,
-    'discharge_port': discharge_port,
-    'mother_vessel': mother_vessel,
-    'stowage_code': stowage_code,
-    'final_pod': final_pod,
+    'departure_date': departure_date.replace(':', ''),
+    'discharge_port': discharge_port.replace(':', ''),
+    'mother_vessel': mother_vessel.replace('VSL/VOY:', ''),     #regex: ta bort 'VSL/VOY:'
+    'stowage_code': stowage_code.replace(':', ''),
+    'final_pod': extract_final_pod(final_pod),                 #regex: ta bort allt efter komma
     'commodity': commodity,
-    'discharge_terminal': discharge_terminal,
-    'container_info': container_info,
-    'container_weight': container_weight,
-    'container_tare': container_tare,
+    'discharge_terminal': discharge_terminal.replace(':', ''),   #endast "godkända" terminaler ska tas med
+    'container_info': container_info,       #får inte med containrar på flera rader
+    'container_weight': extract_container_weight(container_weight),
+    'container_tare': extract_tare_weight(container_tare),
     'dangerous_cargo': dangerous_cargo
 }
 
-print(return_dict['container_info'])
+print(return_dict)
