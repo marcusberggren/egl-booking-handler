@@ -53,7 +53,7 @@ rect_container_tare = (12, 29, 10, 19)
 rect_dangerous_cargo = (18, 29, 36, 19)
 
 #file_path= r'bokningar_pdf\special\SB2LBDHY.PDF'
-file_path= r'bokningar_pdf\special\SBBP1HTM.pdf'
+file_path= r'bokningar_pdf\special\SB2LCV65.PDF'
 total_height = 0.0
 total_words = []
 
@@ -67,8 +67,7 @@ for page in doc:
     total_height += page.rect.height
 
 
-def get_value_in_rect(search_str, rect_add):
-
+def get_value_in_rect(search_str, rect_add=(0, 0, 0, 0)):
     try:
         rect = doc[0].search_for(search_str)[0] + rect_add
     except:
@@ -77,7 +76,7 @@ def get_value_in_rect(search_str, rect_add):
 
     if rect:
         try:
-            return ' '.join([word[4] for word in total_words if fitz.Rect(word[:4]).intersects(rect)])
+            return re.match(r'^:*(.*)',' '.join([word[4] for word in total_words if fitz.Rect(word[:4]).intersects(rect)])).group(1)
         except:
             print(f"List comprehension for {search_str} not working.")
             return ""
@@ -98,12 +97,55 @@ container_weight = get_value_in_rect(CONTAINER_WEIGHT, rect_container_weight)
 container_tare = get_value_in_rect(CONTAINER_TARE, rect_container_tare)
 dangerous_cargo = get_value_in_rect(DANGEROUS_CARGO, rect_dangerous_cargo)
 
+containers = ""
+container_list = []
+height = 0.0
+search_20dv = ""
+search_40dv = ""
+search_40hc = ""
+
+for page in doc:
+    containers = page.search_for(container_info)
+    search_40hc = page.search_for("40' HI-CUBE")
+    search_40dv = page.search_for("40' STANDARD DRY")
+    search_20dv = page.search_for("20' STANDARD DRY")
+
+
+    for rect in containers:
+        rect_upd = rect + (0, 3 + height, 0, -7 + height)
+        list_comp = re.match(r'^:*(.*)',' '.join([word[4] for word in total_words if fitz.Rect(word[:4]).intersects(rect_upd)])).group(1)
+        container_list.append(list_comp)
+    height += page.rect.height
+
+container_amount = len(container_list)
+
+def check_container_amount(string, amount):
+    match_num = int(re.match(r'^\d+', string).group())
+    if match_num == 1 and amount > 1:
+        return amount
+    else:
+        return match_num
+
+
+def get_container_type(string):
+    c_type = re.match(r'^.*/(.+)', string).group(1)
+    match c_type:
+        case "40' HI-CUBE":
+            return "45G1"
+        case "40' STANDARD DRY":
+            return "42G1"
+        case "20' STANDARD DRY":
+            return "22G1"
+        case _:
+            return ""
+            
+
 def extract_container_weight(string):
     # matches format like 150,000.00
     pattern = r'^\d{1,3}(,\d{3})*\.\d{2}'
     match = re.search(pattern, string)
     if match:
-        return match.group().replace(',', '.')
+        return match.group().replace(',', '')
     else:
         return ""
 
@@ -112,7 +154,7 @@ def extract_tare_weight(string):
     pattern = r'\d{1,3}(,\d{3})*$'
     match = re.search(pattern, string)
     if match:
-        return match.group().replace(',', '.')
+        return match.group().replace(',', '')
     else:
         return None
 
@@ -125,19 +167,30 @@ def extract_final_pod(string):
     else:
         return None
 
+def trim_date_string(string):
+    # trim date string from 'DATE:' if there is any in the beginning
+    pattern= r'^(DATE:)*(.*)$'
+    match = re.search(pattern, string)
+    if match:
+        return match.group(2)
+    else:
+        return ""
+
 return_dict = {
     'booking_revised': booking_revised,
-    'date_booked': date_booked,      #regex sub: 'DATE:'
+    'date_booked': trim_date_string(date_booked),      #regex sub: 'DATE:'
     'booking_number': booking_number,
     'departure_week': departure_week,
-    'departure_date': departure_date.replace(':', ''),
-    'discharge_port': discharge_port.replace(':', ''),
+    'departure_date': departure_date,
+    'discharge_port': discharge_port,
     'mother_vessel': mother_vessel.replace('VSL/VOY:', ''),     #regex: ta bort 'VSL/VOY:'
-    'stowage_code': stowage_code.replace(':', ''),
+    'stowage_code': stowage_code,
     'final_pod': extract_final_pod(final_pod),                 #regex: ta bort allt efter komma
     'commodity': commodity,
-    'discharge_terminal': discharge_terminal.replace(':', ''),   #endast "godkända" terminaler ska tas med
+    'discharge_terminal': discharge_terminal,   #endast "godkända" terminaler ska tas med
     'container_info': container_info,       #får inte med containrar på flera rader
+    'container_amount': check_container_amount(container_info, container_amount),
+    'container_type': get_container_type(container_info),
     'container_weight': extract_container_weight(container_weight),
     'container_tare': extract_tare_weight(container_tare),
     'dangerous_cargo': dangerous_cargo
