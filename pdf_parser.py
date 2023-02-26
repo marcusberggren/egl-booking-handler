@@ -56,6 +56,10 @@ rect_dangerous_cargo = (18, 29, 36, 19)
 file_path= r'bokningar_pdf\special\SB2LCV65.PDF'
 total_height = 0.0
 total_words = []
+search_20dv = ""
+search_40dv = ""
+search_40hc = ""
+container_types = {'20dv': 0, '40dv': 0, '40hc': 0}
 
 with open(file_path) as f:
     doc = fitz.open(f)
@@ -64,7 +68,18 @@ for page in doc:
     word_list = page.get_text('words')
     for word in word_list:
         total_words.append([word[0], word[1] + total_height, word[2], word[3] + total_height, word[4]])
+
+    d20 = page.search_for("20' STANDARD DRY")
+    d40 = page.search_for("40' STANDARD DRY")
+    h40 = page.search_for("40' HI-CUBE")
+
     total_height += page.rect.height
+
+
+    container_types['20dv'] += len(d20)
+    container_types['40dv'] += len(d40)
+    container_types['40hc'] += len(h40)
+
 
 
 def get_value_in_rect(search_str, rect_add=(0, 0, 0, 0)):
@@ -84,7 +99,7 @@ def get_value_in_rect(search_str, rect_add=(0, 0, 0, 0)):
 booking_revised = get_value_in_rect(BOOKING_REVISED, rect_booking_revised)
 date_booked = get_value_in_rect(DATE_BOOKED, rect_date_booked)
 booking_number = get_value_in_rect(BOOKING_NUMBER, rect_booking_number)
-departure_week = get_value_in_rect(DEPARTURE_WEEK, rect_departure_week)
+departure_voy = get_value_in_rect(DEPARTURE_WEEK, rect_departure_week)
 departure_date = get_value_in_rect(DEPARTURE_DATE, rect_departure_date)
 discharge_port = get_value_in_rect(DISCHARGE_PORT, rect_discharge_port)
 mother_vessel = get_value_in_rect(MOTHER_VESSEL, rect_mother_vessel)
@@ -104,12 +119,16 @@ search_20dv = ""
 search_40dv = ""
 search_40hc = ""
 
+"""
+Another loop to find if for example "1 /40' HI-CUBE" exists in more places than one. If it does then it collects them in a list and  
+"""
+
 for page in doc:
     containers = page.search_for(container_info)
     search_40hc = page.search_for("40' HI-CUBE")
     search_40dv = page.search_for("40' STANDARD DRY")
     search_20dv = page.search_for("20' STANDARD DRY")
-
+    print(containers)
 
     for rect in containers:
         rect_upd = rect + (0, 3 + height, 0, -7 + height)
@@ -118,6 +137,8 @@ for page in doc:
     height += page.rect.height
 
 container_amount = len(container_list)
+
+
 
 def check_container_amount(string, amount):
     match_num = int(re.match(r'^\d+', string).group())
@@ -140,27 +161,27 @@ def get_container_type(string):
             return ""
             
 
-def extract_container_weight(string):
+def extract_container_weight(string: str) -> float:
     # matches format like 150,000.00
     pattern = r'^\d{1,3}(,\d{3})*\.\d{2}'
-    match = re.search(pattern, string)
-    if match:
-        return match.group().replace(',', '')
+    matching = re.search(pattern, string)
+    if matching:
+        return float(matching.group().replace(',', ''))
     else:
-        return ""
+        return 0.0
 
 def extract_tare_weight(string):
     # matches format at end of string like 25,200
     pattern = r'\d{1,3}(,\d{3})*$'
     match = re.search(pattern, string)
     if match:
-        return match.group().replace(',', '')
+        return float(match.group().replace(',', ''))
     else:
-        return None
+        return 0.0
 
 def extract_final_pod(string):
     # matches all characters before the first comma after a colon
-    pattern = r'^:(.+?),'
+    pattern = r'^:*(.+?),'
     match = re.search(pattern, string)
     if match:
         return match.group(1)
@@ -175,25 +196,48 @@ def trim_date_string(string):
         return match.group(2)
     else:
         return ""
+    
+def check_weights(gross_weight, tare_weight, container_amount):
+    container_count = re.match(r'^\d+', container_amount).group()
+    return (gross_weight + tare_weight)/ int(container_count)
+
+def ocean_vessel_and_voy(string):
+    matching = re.match(r'^VSL/VOY:*(\D+)\s([\d\w-]*)$', string)
+    return {'vessel': matching.group(1), 'voy': matching.group(2)}
+
+def departure_voyage():
+    pass
+
+def departure_week():
+    pass
+
 
 return_dict = {
     'booking_revised': booking_revised,
-    'date_booked': trim_date_string(date_booked),      #regex sub: 'DATE:'
+    'date_booked': trim_date_string(date_booked),
     'booking_number': booking_number,
-    'departure_week': departure_week,
+    'departure_week': departure_voy,
     'departure_date': departure_date,
     'discharge_port': discharge_port,
-    'mother_vessel': mother_vessel.replace('VSL/VOY:', ''),     #regex: ta bort 'VSL/VOY:'
+    'mother_vessel': mother_vessel,
+    'ocean_vessel': ocean_vessel_and_voy(mother_vessel)['vessel'],
+    'voyage': ocean_vessel_and_voy(mother_vessel)['voy'],
     'stowage_code': stowage_code,
-    'final_pod': extract_final_pod(final_pod),                 #regex: ta bort allt efter komma
+    'final_pod': extract_final_pod(final_pod),
     'commodity': commodity,
     'discharge_terminal': discharge_terminal,   #endast "godkända" terminaler ska tas med
-    'container_info': container_info,       #får inte med containrar på flera rader
+    'container_info': container_info,
     'container_amount': check_container_amount(container_info, container_amount),
     'container_type': get_container_type(container_info),
+    'weights': {'total_nwt': '',
+                'total_tare': '',
+                'total_gwt': '',
+                'total_weight_per_unit': '',
+                },
+    'final_weight': check_weights(extract_container_weight(container_weight), extract_tare_weight(container_tare), container_info),
     'container_weight': extract_container_weight(container_weight),
     'container_tare': extract_tare_weight(container_tare),
-    'dangerous_cargo': dangerous_cargo
+    'dangerous_cargo': dangerous_cargo.strip('()')
 }
 
 print(return_dict)
