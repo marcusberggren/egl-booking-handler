@@ -3,7 +3,7 @@ import time
 import pyautogui
 
 bnr_egl = '503300003037'
-amount = '2'
+amount = '35'
 equ = '45G1'
 weight = '27000'
 
