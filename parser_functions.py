@@ -1,6 +1,6 @@
-import fitz
 import re
 
+import fitz
 
 """
 Functions for pdf_parser file.
@@ -9,14 +9,14 @@ Functions for pdf_parser file.
 def get_value_in_rect(doc, total_words, search_str, rect_add=(0, 0, 0, 0)):
     try:
         rect = doc[0].search_for(search_str)[0] + rect_add
-    except:
+    except IndexError:
         print(f"Rect {search_str} not found.")
         return ""
 
     if rect:
         try:
             return re.match(r'^:*(.*)',' '.join([word[4] for word in total_words if fitz.Rect(word[:4]).intersects(rect)])).group(1)
-        except:
+        except IndexError:
             print(f"List comprehension for {search_str} not working.")
             return ""
 
@@ -95,7 +95,9 @@ def ocean_vessel_and_voy(string):
     return {'vessel': matching.group(1), 'voy': matching.group(2)}
 
 def departure_voyage():
+    """TBC"""
     pass
 
 def departure_week():
+    """TBC"""
     pass

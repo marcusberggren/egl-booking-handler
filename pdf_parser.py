@@ -1,6 +1,7 @@
 import re
 
 import fitz
+
 import parser_functions as pf
 
 BOOKING_REVISED = "/ REVISE :"
@@ -15,9 +16,9 @@ FINAL_POD = "PORT OF DISCHARGING"
 COMMODITY = "COMMODITY"
 DISCHARGE_TERMINAL = "REMARKS"
 CONTAINER_INFO = "QTY/TYPE"
-CONTAINER_40HC = ""
-CONTAINER_40DV = ""
-CONTAINER_20DV = ""
+CONTAINER_40HC = "40' HI-CUBE"
+CONTAINER_40DV = "40' STANDARD DRY"
+CONTAINER_20DV = "20' STANDARD DRY"
 CONTAINER_WEIGHT = "GWT+TARE"
 CONTAINER_TARE = "WT(KGS)"
 DANGEROUS_CARGO = "IMO CLASS/UN"
@@ -55,10 +56,12 @@ rect_container_info = (0, 29, 100, 19)
 rect_container_weight = (-5, 29, 6, 19)
 rect_container_tare = (12, 29, 10, 19)
 rect_dangerous_cargo = (18, 29, 36, 19)
+rect_container_amount = (-24, 10, -40, 0)
 
 #file_path= r'bokningar_pdf\special\SB2LBDHY.PDF'
-file_path= r'bokningar_pdf\special\SB2LCV65.PDF'
-#file_path= r'bokningar_pdf\special\SB2SS6YS - 20 + 40.PDF'
+#file_path= r'bokningar_pdf\special\SB2LCV65.PDF'
+#file_path= r"bokningar_pdf\special\SBBXNCPY.pdf"
+file_path= r'bokningar_pdf\special\SB2SS6YS - 20 + 40.PDF'
 total_height = 0.0
 total_words = []
 search_20dv = ""
@@ -84,7 +87,8 @@ for page in doc:
     container_types['40dv'] += len(d40)
     container_types['40hc'] += len(h40)
 
-
+    print(page.search_for("22 "))
+    print(page.search_for("40' HI-CUBE"))
 
 
 booking_revised = pf.get_value_in_rect(doc, total_words, BOOKING_REVISED, rect_booking_revised)
@@ -102,6 +106,9 @@ container_info = pf.get_value_in_rect(doc, total_words, CONTAINER_INFO, rect_con
 container_weight = pf.get_value_in_rect(doc, total_words, CONTAINER_WEIGHT, rect_container_weight)
 container_tare = pf.get_value_in_rect(doc, total_words, CONTAINER_TARE, rect_container_tare)
 dangerous_cargo = pf.get_value_in_rect(doc, total_words, DANGEROUS_CARGO, rect_dangerous_cargo)
+container_40hc = pf.get_value_in_rect(doc, total_words, CONTAINER_40HC, rect_container_amount)
+container_40dv = pf.get_value_in_rect(doc, total_words, CONTAINER_40DV, rect_container_amount)
+container_20dv = pf.get_value_in_rect(doc, total_words, CONTAINER_20DV, rect_container_amount)
 
 containers = ""
 container_list = []
