@@ -1,6 +1,7 @@
 import re
 
 import fitz
+import parser_functions as pf
 
 BOOKING_REVISED = "/ REVISE :"
 DATE_BOOKED = "DATE:"
@@ -14,6 +15,9 @@ FINAL_POD = "PORT OF DISCHARGING"
 COMMODITY = "COMMODITY"
 DISCHARGE_TERMINAL = "REMARKS"
 CONTAINER_INFO = "QTY/TYPE"
+CONTAINER_40HC = ""
+CONTAINER_40DV = ""
+CONTAINER_20DV = ""
 CONTAINER_WEIGHT = "GWT+TARE"
 CONTAINER_TARE = "WT(KGS)"
 DANGEROUS_CARGO = "IMO CLASS/UN"
@@ -54,6 +58,7 @@ rect_dangerous_cargo = (18, 29, 36, 19)
 
 #file_path= r'bokningar_pdf\special\SB2LBDHY.PDF'
 file_path= r'bokningar_pdf\special\SB2LCV65.PDF'
+#file_path= r'bokningar_pdf\special\SB2SS6YS - 20 + 40.PDF'
 total_height = 0.0
 total_words = []
 search_20dv = ""
@@ -75,42 +80,28 @@ for page in doc:
 
     total_height += page.rect.height
 
-
     container_types['20dv'] += len(d20)
     container_types['40dv'] += len(d40)
     container_types['40hc'] += len(h40)
 
 
 
-def get_value_in_rect(search_str, rect_add=(0, 0, 0, 0)):
-    try:
-        rect = doc[0].search_for(search_str)[0] + rect_add
-    except:
-        print(f"Rect {search_str} not found.")
-        return ""
 
-    if rect:
-        try:
-            return re.match(r'^:*(.*)',' '.join([word[4] for word in total_words if fitz.Rect(word[:4]).intersects(rect)])).group(1)
-        except:
-            print(f"List comprehension for {search_str} not working.")
-            return ""
-
-booking_revised = get_value_in_rect(BOOKING_REVISED, rect_booking_revised)
-date_booked = get_value_in_rect(DATE_BOOKED, rect_date_booked)
-booking_number = get_value_in_rect(BOOKING_NUMBER, rect_booking_number)
-departure_voy = get_value_in_rect(DEPARTURE_WEEK, rect_departure_week)
-departure_date = get_value_in_rect(DEPARTURE_DATE, rect_departure_date)
-discharge_port = get_value_in_rect(DISCHARGE_PORT, rect_discharge_port)
-mother_vessel = get_value_in_rect(MOTHER_VESSEL, rect_mother_vessel)
-stowage_code = get_value_in_rect(STOWAGE_CODE, rect_stowage_code)
-final_pod = get_value_in_rect(FINAL_POD, rect_final_pod)
-commodity = get_value_in_rect(COMMODITY, rect_commodity)
-discharge_terminal = get_value_in_rect(DISCHARGE_TERMINAL, rect_discharge_terminal)
-container_info = get_value_in_rect(CONTAINER_INFO, rect_container_info)
-container_weight = get_value_in_rect(CONTAINER_WEIGHT, rect_container_weight)
-container_tare = get_value_in_rect(CONTAINER_TARE, rect_container_tare)
-dangerous_cargo = get_value_in_rect(DANGEROUS_CARGO, rect_dangerous_cargo)
+booking_revised = pf.get_value_in_rect(doc, total_words, BOOKING_REVISED, rect_booking_revised)
+date_booked = pf.get_value_in_rect(doc, total_words, DATE_BOOKED, rect_date_booked)
+booking_number = pf.get_value_in_rect(doc, total_words, BOOKING_NUMBER, rect_booking_number)
+departure_voy = pf.get_value_in_rect(doc, total_words, DEPARTURE_WEEK, rect_departure_week)
+departure_date = pf.get_value_in_rect(doc, total_words, DEPARTURE_DATE, rect_departure_date)
+discharge_port = pf.get_value_in_rect(doc, total_words, DISCHARGE_PORT, rect_discharge_port)
+mother_vessel = pf.get_value_in_rect(doc, total_words, MOTHER_VESSEL, rect_mother_vessel)
+stowage_code = pf.get_value_in_rect(doc, total_words, STOWAGE_CODE, rect_stowage_code)
+final_pod = pf.get_value_in_rect(doc, total_words, FINAL_POD, rect_final_pod)
+commodity = pf.get_value_in_rect(doc, total_words, COMMODITY, rect_commodity)
+discharge_terminal = pf.get_value_in_rect(doc, total_words, DISCHARGE_TERMINAL, rect_discharge_terminal)
+container_info = pf.get_value_in_rect(doc, total_words, CONTAINER_INFO, rect_container_info)
+container_weight = pf.get_value_in_rect(doc, total_words, CONTAINER_WEIGHT, rect_container_weight)
+container_tare = pf.get_value_in_rect(doc, total_words, CONTAINER_TARE, rect_container_tare)
+dangerous_cargo = pf.get_value_in_rect(doc, total_words, DANGEROUS_CARGO, rect_dangerous_cargo)
 
 containers = ""
 container_list = []
@@ -123,121 +114,59 @@ search_40hc = ""
 Another loop to find if for example "1 /40' HI-CUBE" exists in more places than one. If it does then it collects them in a list and  
 """
 
-for page in doc:
-    containers = page.search_for(container_info)
-    search_40hc = page.search_for("40' HI-CUBE")
-    search_40dv = page.search_for("40' STANDARD DRY")
-    search_20dv = page.search_for("20' STANDARD DRY")
-    print(containers)
+list_of_40hc = []
+list_of_40dv = []
+list_of_20dv = []
 
-    for rect in containers:
-        rect_upd = rect + (0, 3 + height, 0, -7 + height)
-        list_comp = re.match(r'^:*(.*)',' '.join([word[4] for word in total_words if fitz.Rect(word[:4]).intersects(rect_upd)])).group(1)
-        container_list.append(list_comp)
+for page in doc:
+    _40hc = page.search_for("40' HI-CUBE")
+    _40dv = page.search_for("40' STANDARD DRY")
+    _20dv = page.search_for("20' STANDARD DRY")
+
+    pf.get_container_list(doc, total_words, height, _40hc, list_of_40hc)
+    pf.get_container_list(doc, total_words, height, _40dv, list_of_40dv)
+    pf.get_container_list(doc, total_words, height, _20dv, list_of_20dv)
+
     height += page.rect.height
 
-container_amount = len(container_list)
+
+"""print(list_of_40hc)
+print(list_of_40dv)
+print(list_of_20dv)"""
 
 
-
-def check_container_amount(string, amount):
-    match_num = int(re.match(r'^\d+', string).group())
-    if match_num == 1 and amount > 1:
-        return amount
-    else:
-        return match_num
-
-
-def get_container_type(string):
-    c_type = re.match(r'^.*/(.+)', string).group(1)
-    match c_type:
-        case "40' HI-CUBE":
-            return "45G1"
-        case "40' STANDARD DRY":
-            return "42G1"
-        case "20' STANDARD DRY":
-            return "22G1"
-        case _:
-            return ""
-            
-
-def extract_container_weight(string: str) -> float:
-    # matches format like 150,000.00
-    pattern = r'^\d{1,3}(,\d{3})*\.\d{2}'
-    matching = re.search(pattern, string)
-    if matching:
-        return float(matching.group().replace(',', ''))
-    else:
-        return 0.0
-
-def extract_tare_weight(string):
-    # matches format at end of string like 25,200
-    pattern = r'\d{1,3}(,\d{3})*$'
-    match = re.search(pattern, string)
-    if match:
-        return float(match.group().replace(',', ''))
-    else:
-        return 0.0
-
-def extract_final_pod(string):
-    # matches all characters before the first comma after a colon
-    pattern = r'^:*(.+?),'
-    match = re.search(pattern, string)
-    if match:
-        return match.group(1)
-    else:
-        return None
-
-def trim_date_string(string):
-    # trim date string from 'DATE:' if there is any in the beginning
-    pattern= r'^(DATE:)*(.*)$'
-    match = re.search(pattern, string)
-    if match:
-        return match.group(2)
-    else:
-        return ""
-    
-def check_weights(gross_weight, tare_weight, container_amount):
-    container_count = re.match(r'^\d+', container_amount).group()
-    return (gross_weight + tare_weight)/ int(container_count)
-
-def ocean_vessel_and_voy(string):
-    matching = re.match(r'^VSL/VOY:*(\D+)\s([\d\w-]*)$', string)
-    return {'vessel': matching.group(1), 'voy': matching.group(2)}
-
-def departure_voyage():
-    pass
-
-def departure_week():
-    pass
+#container_amount = len(container_list)
 
 
 return_dict = {
     'booking_revised': booking_revised,
-    'date_booked': trim_date_string(date_booked),
+    'date_booked': pf.trim_date_string(date_booked),
     'booking_number': booking_number,
     'departure_week': departure_voy,
     'departure_date': departure_date,
     'discharge_port': discharge_port,
     'mother_vessel': mother_vessel,
-    'ocean_vessel': ocean_vessel_and_voy(mother_vessel)['vessel'],
-    'voyage': ocean_vessel_and_voy(mother_vessel)['voy'],
+    'ocean_vessel': pf.ocean_vessel_and_voy(mother_vessel)['vessel'],
+    'voyage': pf.ocean_vessel_and_voy(mother_vessel)['voy'],
     'stowage_code': stowage_code,
-    'final_pod': extract_final_pod(final_pod),
+    'final_pod': pf.extract_final_pod(final_pod),
     'commodity': commodity,
     'discharge_terminal': discharge_terminal,   #endast "godkända" terminaler ska tas med
     'container_info': container_info,
-    'container_amount': check_container_amount(container_info, container_amount),
-    'container_type': get_container_type(container_info),
+    'container_amount': {'40hc': pf.check_container_amount(container_info, list_of_40hc),
+                         '40dv': pf.check_container_amount(container_info, list_of_40dv),
+                         '20dv': pf.check_container_amount(container_info, list_of_20dv)},
+    'container_type': pf.get_container_type(container_info),
     'weights': {'total_nwt': '',
                 'total_tare': '',
                 'total_gwt': '',
                 'total_weight_per_unit': '',
                 },
-    'final_weight': check_weights(extract_container_weight(container_weight), extract_tare_weight(container_tare), container_info),
-    'container_weight': extract_container_weight(container_weight),
-    'container_tare': extract_tare_weight(container_tare),
+    'final_weight': pf.check_weights(pf.extract_container_weight(container_weight), pf.extract_tare_weight(container_tare), container_info),
+    'container_weight': pf.extract_container_weight(container_weight),
+    'container_tare': pf.extract_tare_weight(container_tare),
     'dangerous_cargo': dangerous_cargo.strip('()')
 }
 
-print(return_dict)
+for key, value in return_dict.items():
+    print(f'{key}: {value}')
