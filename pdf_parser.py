@@ -56,12 +56,13 @@ rect_container_info = (0, 29, 100, 19)
 rect_container_weight = (-5, 29, 6, 19)
 rect_container_tare = (12, 29, 10, 19)
 rect_dangerous_cargo = (18, 29, 36, 19)
-rect_container_amount = (-24, 10, -40, 0)
+rect_container_hc = (-24, 10, -72, 0)
+rect_container_dv = (-24, 10, -102, 0)
 
-#file_path= r'bokningar_pdf\special\SB2LBDHY.PDF'
-#file_path= r'bokningar_pdf\special\SB2LCV65.PDF'
-#file_path= r"bokningar_pdf\special\SBBXNCPY.pdf"
-file_path= r'bokningar_pdf\special\SB2SS6YS - 20 + 40.PDF'
+#file_path= r'bokningar_pdf\special\SB2LBDHY.PDF'           
+file_path= r'bokningar_pdf\special\SB2LCV65.PDF'               # (1x40HC) * 6
+#file_path= r'bokningar_pdf\special\SBBXNCPY.pdf'               # 22x40HC  
+#file_path= r'bokningar_pdf\special\SB2SS6YS - 20 + 40.PDF'      # 1x40DV, 1x20DV   
 total_height = 0.0
 total_words = []
 search_20dv = ""
@@ -71,6 +72,13 @@ container_types = {'20dv': 0, '40dv': 0, '40hc': 0}
 
 with open(file_path) as f:
     doc = fitz.open(f)
+
+def get_container_amount(rect_list, rect_add, height):
+    for rect in rect_list:
+        rect += rect_add #+ (0, height, 0, height)
+        #return [word[4] for word in total_words if fitz.Rect(word[:4]).intersects(rect)]
+
+test = []
 
 for page in doc:
     word_list = page.get_text('words')
@@ -87,8 +95,22 @@ for page in doc:
     container_types['40dv'] += len(d40)
     container_types['40hc'] += len(h40)
 
-    print(page.search_for("22 "))
-    print(page.search_for("40' HI-CUBE"))
+    test = get_container_amount(h40, rect_container_hc, total_height)
+
+    print(test)
+
+
+
+#print("1)", page.search_for("4,166.67"))
+#print("1)", page.search_for("10,000.00"))
+#print("1)", page.search_for("550,000.00"))
+#print("2)", page.search_for("+4,200"))
+#print("2)", page.search_for("+2,400"))
+#print("2)", page.search_for("+92,400"))
+#print("3)", page.search_for("(NON-HAZARDOUS)"))
+#print("4)", d20, d40, h40)
+
+print(container_types)
 
 
 booking_revised = pf.get_value_in_rect(doc, total_words, BOOKING_REVISED, rect_booking_revised)
@@ -106,9 +128,11 @@ container_info = pf.get_value_in_rect(doc, total_words, CONTAINER_INFO, rect_con
 container_weight = pf.get_value_in_rect(doc, total_words, CONTAINER_WEIGHT, rect_container_weight)
 container_tare = pf.get_value_in_rect(doc, total_words, CONTAINER_TARE, rect_container_tare)
 dangerous_cargo = pf.get_value_in_rect(doc, total_words, DANGEROUS_CARGO, rect_dangerous_cargo)
-container_40hc = pf.get_value_in_rect(doc, total_words, CONTAINER_40HC, rect_container_amount)
-container_40dv = pf.get_value_in_rect(doc, total_words, CONTAINER_40DV, rect_container_amount)
-container_20dv = pf.get_value_in_rect(doc, total_words, CONTAINER_20DV, rect_container_amount)
+container_40hc = pf.get_value_in_rect(doc, total_words, CONTAINER_40HC, rect_container_hc)
+container_40dv = pf.get_value_in_rect(doc, total_words, CONTAINER_40DV, rect_container_dv)
+container_20dv = pf.get_value_in_rect(doc, total_words, CONTAINER_20DV, rect_container_dv)
+
+print(container_20dv, container_40dv, container_40hc)
 
 containers = ""
 container_list = []

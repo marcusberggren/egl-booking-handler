@@ -1,6 +1,6 @@
+import fitz
 import re
 
-import fitz
 
 """
 Functions for pdf_parser file.
