@@ -1,6 +1,7 @@
-import fitz
+import itertools
 import re
 
+import fitz
 
 """
 Functions for pdf_parser file.
@@ -20,14 +21,17 @@ def get_value_in_rect(doc, total_words, search_str, rect_add=(0, 0, 0, 0)):
             print(f"List comprehension for {search_str} not working.")
             return ""
 
+    
+def get_container_info(total_words, rect_list, rect_add, height):
+    list_count = []
+    for rect in rect_list:
+        rect = rect + rect_add + (0, height, 0, height)
+        list_count.append(float(''.join([word[4] for word in total_words if fitz.Rect(word[:4]).intersects(rect)])))
+    return list_count
 
-def check_container_amount(string, list_of_containers):
-    amount = len(list_of_containers)
-    match_num = int(re.match(r'^\d+', string).group())
-    if match_num == 1 and amount > 1:
-        return amount
-    else:
-        return match_num
+def container_counter(*lists):
+    concatenated_list = itertools.chain.from_iterable(*lists)
+    return sum(concatenated_list)
 
 
 def get_container_type(string):
@@ -41,14 +45,7 @@ def get_container_type(string):
             return "22G1"
         case _:
             return "N/A"
-            
-def get_container_list(doc: fitz.Document, total_words: list, height: float, containers: list, container_list: list) -> list:
-    for rect in containers:
-        if rect:
-            rect_upd = rect + (0, 3 + height, 0, -7 + height)
-            list_comp = re.match(r'^:*(.*)',' '.join([word[4] for word in total_words if fitz.Rect(word[:4]).intersects(rect_upd)])).group(1)
-            container_list.append(list_comp)
-    return container_list
+
 
 def extract_container_weight(string: str) -> float:
     # matches format like 150,000.00
