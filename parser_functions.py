@@ -22,16 +22,70 @@ def get_value_in_rect(doc, total_words, search_str, rect_add=(0, 0, 0, 0)):
             return ""
 
     
-def get_container_info(total_words, rect_list, rect_add, height):
+def get_container_amount(total_words, rect_list, rect_add, height):
     list_count = []
     for rect in rect_list:
         rect = rect + rect_add + (0, height, 0, height)
-        list_count.append(float(''.join([word[4] for word in total_words if fitz.Rect(word[:4]).intersects(rect)])))
+        result = re.sub(r'^\+*', '',''.join([word[4] for word in total_words if fitz.Rect(word[:4]).intersects(rect)])).replace(',', '')
+        list_count.append(float(result))
     return list_count
 
-def container_counter(*lists):
+def get_container_info(total_words, rect_list, rect_add, height):
+    list_count_nwt = []
+    list_count_tare = []
+    for rect in rect_list:
+        rect = rect + rect_add + (0, height, 0, height)
+        #result = re.sub(r'^\+*', '',''.join([word[4] for word in total_words if fitz.Rect(word[:4]).intersects(rect)])).replace(',', '')
+        result = re.match(r'(\d{1,4},\d{3}.\d{2})*(\+*\d{1,3},\d{3})*',
+                          ''.join([word[4] for word in total_words if fitz.Rect(word[:4]).intersects(rect)]))
+        result_nwt = result.group(1)
+        result_tare = result.group(2)
+
+        if result_nwt is not None:
+            result_nwt = re.sub(r',*\+*', '', result_nwt)
+        else:
+            result_nwt = 0
+        if result_tare is not None:
+            result_tare = re.sub(r',*\+*', '', result_tare)
+        else:
+            result_tare = 0
+        
+        list_count_nwt.append(float(result_nwt))
+        list_count_tare.append(float(result_tare))
+
+    return list_count_nwt, list_count_tare
+
+def get_container_hazards(total_words, rect_list, rect_add, height):
+    list_count = ""
+    for rect in rect_list:
+        rect = rect + rect_add + (0, height, 0, height)
+        list_count += re.sub(r'[()]', ' ', ''.join([word[4] for word in total_words if fitz.Rect(word[:4]).intersects(rect)]))
+    return list_count.split()
+
+def create_hazards_str(hazards_list:list) -> str:
+    unique_list = concatenate_list(hazards_list)
+    #string = ' '.join(hazards_list)
+    return list(set(unique_list))
+    
+
+def concatenate_floats(*lists):
     concatenated_list = itertools.chain.from_iterable(*lists)
-    return sum(concatenated_list)
+    summa = float(sum(concatenated_list))
+    if summa == 0:
+        return None
+    else:
+        return round(summa, 2)
+    
+def concatenate_list(*lists):
+    return itertools.chain.from_iterable(*lists)
+
+
+def calculate_weights(weight_list:list, container_list:list) -> float:
+    container_amount = concatenate_floats(container_list)
+    if container_amount is None:
+        return None
+    else:
+        return float(concatenate_floats(weight_list))/container_amount
 
 
 def get_container_type(string):
@@ -47,7 +101,7 @@ def get_container_type(string):
             return "N/A"
 
 
-def extract_container_weight(string: str) -> float:
+def extract_cargo_weight(string:str) -> float:
     # matches format like 150,000.00
     pattern = r'^\d{1,3}(,\d{3})*\.\d{2}'
     matching = re.search(pattern, string)
@@ -56,7 +110,7 @@ def extract_container_weight(string: str) -> float:
     else:
         return 0.0
 
-def extract_tare_weight(string):
+def extract_tare_weight(string:str) -> float:
     # matches format at end of string like 25,200
     pattern = r'\d{1,3}(,\d{3})*$'
     match = re.search(pattern, string)
