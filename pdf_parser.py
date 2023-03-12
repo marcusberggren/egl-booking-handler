@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 
 import fitz
 from tqdm import tqdm
@@ -94,14 +95,29 @@ def main(file_path):
     final_pod = pf.get_value_in_rect(doc, total_words, FINAL_POD, rect_final_pod)
     commodity = pf.get_value_in_rect(doc, total_words, COMMODITY, rect_commodity)
     discharge_terminal = pf.get_value_in_rect(doc, total_words, DISCHARGE_TERMINAL, rect_discharge_terminal)
+    
 
-
+    """{'nwt': {'45G1': pf.calculate_weights(list_nwt_40hc, list_count_40hc),
+                            '42G1': pf.calculate_weights(list_nwt_40dv, list_count_40dv),
+                            '22G1': pf.calculate_weights(list_nwt_20dv, list_count_20dv)
+                            },
+                    'tare': {'45G1': pf.calculate_weights(list_tare_40hc, list_count_40hc),
+                            '42G1': pf.calculate_weights(list_tare_40dv, list_count_40dv),
+                            '22G1': pf.calculate_weights(list_tare_20dv, list_count_20dv)
+                            },
+                    'tonnes': {'45G1': pf.calculate_vgm(list_nwt_40hc, list_tare_40hc, list_count_40hc),
+                               '42G1': pf.calculate_vgm(list_nwt_40dv, list_tare_40dv, list_count_40dv),
+                               '22G1': pf.calculate_vgm(list_nwt_20dv, list_tare_20dv, list_count_20dv)}
+                    },"""
 
     return_dict = {
+        'filename': file,
         'booking_revised': booking_revised,
         'date_booked': pf.trim_date_string(date_booked),
+        'same_date': pf.check_if_dates_match(date_booked, departure_date),
         'booking_number': booking_number,
-        'departure_week': departure_voy,
+        'departure_voy': departure_voy,
+        'departure_week': pf.get_week(departure_date),
         'departure_date': departure_date,
         'discharge_port': discharge_port,
         'ocean_vessel': pf.ocean_vessel_and_voy(mother_vessel)['vessel'],
@@ -114,15 +130,11 @@ def main(file_path):
                              '42G1': pf.concatenate_floats(list_count_40dv),
                              '22G1': pf.concatenate_floats(list_count_20dv)
                              },
-        'weights': {'nwt': {'45G1': pf.calculate_weights(list_nwt_40hc, list_count_40hc),
-                            '42G1': pf.calculate_weights(list_nwt_40dv, list_count_40dv),
-                            '22G1': pf.calculate_weights(list_nwt_20dv, list_count_20dv)
-                            },
-                    'tare': {'45G1': pf.calculate_weights(list_tare_40hc, list_count_40hc),
-                            '42G1': pf.calculate_weights(list_tare_40dv, list_count_40dv),
-                            '22G1': pf.calculate_weights(list_tare_20dv, list_count_20dv)
-                            }
-                    },
+        'weights': {'45G1': pf.calculate_vgm(list_nwt_40hc, list_tare_40hc, list_count_40hc),
+                    '42G1': pf.calculate_vgm(list_nwt_40dv, list_tare_40dv, list_count_40dv),
+                    '22G1': pf.calculate_vgm(list_nwt_20dv, list_tare_20dv, list_count_20dv)
+                    },        
+
         'hazardous_cargo': {'45G1': pf.create_hazards_list(list_hazards_40hc),
                             '42G1': pf.create_hazards_list(list_hazards_40dv),
                             '22G1': pf.create_hazards_list(list_hazards_20dv)
@@ -133,7 +145,7 @@ def main(file_path):
 if __name__ == '__main__':
     #for file in tqdm(os.listdir(file_dir)):
     for file in os.listdir(file_dir):
-        print(file)
         for key, value in main(os.path.join(file_dir, file)).items():
             print(f'{key:>20}: {str(value)}')
-        print("----------------------"*6)
+        print("----------------------"*4)
+    

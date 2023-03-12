@@ -1,5 +1,6 @@
 import itertools
 import re
+from datetime import datetime
 
 import fitz
 
@@ -18,7 +19,7 @@ def get_value_in_rect(doc, total_words, search_str, rect_add=(0, 0, 0, 0)):
         try:
             return re.match(r'^:*(.*)',' '.join([word[4] for word in total_words if fitz.Rect(word[:4]).intersects(rect)])).group(1)
         except IndexError:
-            #print(f"List comprehension for {search_str} not working.")
+            print(f"List comprehension for {search_str} not working.")
             return ""
 
     
@@ -58,7 +59,7 @@ def get_container_hazards(total_words, rect_list, rect_add, height):
     list_count = ""
     for rect in rect_list:
         rect = rect + rect_add + (0, height, 0, height)
-        list_count += re.sub(r'[()]', ' ', ''.join([word[4] for word in total_words if fitz.Rect(word[:4]).intersects(rect)]))
+        list_count += ''.join([word[4] for word in total_words if fitz.Rect(word[:4]).intersects(rect)]).replace('(NON-HAZARDOUS)', '').strip()
     return list_count.split()
 
 def create_hazards_list(hazards_list:list) -> list:
@@ -69,7 +70,7 @@ def create_hazards_list(hazards_list:list) -> list:
 def concatenate_floats(*lists:list) -> float:
     concatenated_list = itertools.chain.from_iterable(*lists)
     summa = float(sum(concatenated_list))
-    return round(summa, 2)
+    return int(summa)
     
 def concatenate_list(*lists):
     return itertools.chain.from_iterable(*lists)
@@ -82,6 +83,21 @@ def calculate_weights(weight_list:list, container_list:list) -> float:
     else:
         return float(concatenate_floats(weight_list))/container_amount
 
+def calculate_vgm(list_nwt, list_tare, list_count):
+    return round((calculate_weights(list_nwt, list_count) + calculate_weights(list_tare, list_count)), 2)
+
+def get_week(etd):
+    return datetime.strptime(etd, r'%Y/%m/%d').isocalendar().week
+
+def check_if_dates_match(booking_date, etd):
+    booking_date = re.search(r'\d{4}/\d{2}/\d{2}', booking_date).group()
+    booking_date = datetime.strptime(booking_date, r'%Y/%m/%d')
+    etd = datetime.strptime(etd, r'%Y/%m/%d')
+    if booking_date == etd:
+        return "yes"
+    else:
+        return "no"
+    
 
 def extract_final_pod(string):
     # matches all characters before the first comma after a colon
@@ -106,11 +122,6 @@ def trim_date_string(string):
 def ocean_vessel_and_voy(string):
     matching = re.match(r'^VSL/VOY:*(\D+)\s([\d\w-]*)$', string)
     return {'vessel': matching.group(1), 'voy': matching.group(2)}
-
-
-def departure_voyage():
-    """TBC"""
-    pass
 
 def departure_week():
     """TBC"""
